@@ -27,7 +27,7 @@ fun GlassBackground(
 ) {
     val baseBg = if (isDarkMode) NeuDarkBg else NeuLightBg
 
-    val bgModifier = if (hazeState != null) {
+    val bgModifier = if (hazeState != null && ENABLE_HAZE_BLUR) {
         Modifier.fillMaxSize().hazeSource(state = hazeState)
     } else {
         Modifier.fillMaxSize()

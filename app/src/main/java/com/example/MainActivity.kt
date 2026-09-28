@@ -66,6 +66,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Must run before super.onCreate: shows the system splash instantly on
         // launch so there is no 2-3s blank gap before the Compose splash appears.
+        com.example.ui.util.CrashReporter.install(applicationContext)
+        val lastCrash = com.example.ui.util.CrashReporter.consume(applicationContext)
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -76,6 +78,15 @@ class MainActivity : FragmentActivity() {
         val preferences = AppPreferences(applicationContext)
 
         setContent {
+            var crashText by remember { mutableStateOf(lastCrash) }
+            val crashToShow = crashText
+            if (crashToShow != null) {
+                com.example.ui.screens.CrashReportScreen(
+                    crashText = crashToShow,
+                    onContinue = { crashText = null }
+                )
+                return@setContent
+            }
             val isDarkMode by preferences.isDarkMode.collectAsState()
 
             MyApplicationTheme(darkTheme = isDarkMode) {

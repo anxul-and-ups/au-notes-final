@@ -44,6 +44,13 @@ import androidx.compose.ui.draw.scale
  */
 
 /**
+ * Kill switch for the real Haze blur.
+ * false = crash-safe "frosted" look (translucent gradient + edge highlight, no
+ * RenderEffect). Flip to true once Haze is confirmed stable on the device.
+ */
+const val ENABLE_HAZE_BLUR = false
+
+/**
  * Glass surface — real blur of whatever is behind it.
  */
 @Composable
@@ -97,17 +104,39 @@ fun HazeGlassCard(
         )
     } else Modifier
 
+    val fallbackBrush = if (isDarkMode) {
+        Brush.verticalGradient(
+            listOf(
+                if (strong) Color(0xCC202632) else Color(0x33FFFFFF),
+                if (strong) Color(0xCC161B25) else Color(0x14FFFFFF)
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            listOf(
+                if (strong) Color(0xE6FFFFFF) else Color(0x99FFFFFF),
+                if (strong) Color(0xCCF3F6FA) else Color(0x66FFFFFF)
+            )
+        )
+    }
+
     Box(
         modifier = modifier
             .scale(pressScale)
             .clip(shape)
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    blurRadius = if (strong) 40.dp else 24.dp,
-                    tint = HazeTint(tintColor),
-                    noiseFactor = 0.05f
-                )
+            .then(
+                if (ENABLE_HAZE_BLUR) {
+                    Modifier.hazeChild(
+                        state = hazeState,
+                        style = HazeStyle(
+                            blurRadius = if (strong) 40.dp else 24.dp,
+                            tint = HazeTint(tintColor),
+                            noiseFactor = 0.05f
+                        )
+                    )
+                } else {
+                    Modifier.background(fallbackBrush)
+                }
             )
             .border(borderWidth, borderBrush, shape)
             .then(clickableModifier)
@@ -129,7 +158,7 @@ fun HazeBackground(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .hazeSource(state = hazeState)
+            .then(if (ENABLE_HAZE_BLUR) Modifier.hazeSource(state = hazeState) else Modifier)
     ) {
         content()
     }
@@ -151,12 +180,18 @@ fun HazeGlassChip(
     Box(
         modifier = modifier
             .clip(shape)
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    blurRadius = 16.dp,
-                    tint = HazeTint(tintColor)
-                )
+            .then(
+                if (ENABLE_HAZE_BLUR) {
+                    Modifier.hazeChild(
+                        state = hazeState,
+                        style = HazeStyle(
+                            blurRadius = 16.dp,
+                            tint = HazeTint(tintColor)
+                        )
+                    )
+                } else {
+                    Modifier.background(tintColor)
+                }
             )
             .border(
                 width = 1.dp,
