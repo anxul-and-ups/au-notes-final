@@ -8,4 +8,12 @@
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
+    <!-- Launch theme: system splash shows instantly (before Compose is ready),
+         then switches to Theme.MyApplication via postSplashScreenTheme. -->
+    <style name="Theme.AuNotes.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0A0E1A</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.MyApplication</item>
+    </style>
+
 </resources>

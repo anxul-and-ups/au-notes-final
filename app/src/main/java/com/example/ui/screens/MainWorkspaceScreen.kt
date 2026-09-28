@@ -4,6 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -16,6 +21,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +40,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -77,6 +85,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -93,7 +104,7 @@ import com.example.data.repository.NoteRepository
 import com.example.ui.components.ExportDialog
 import com.example.ui.components.GlassBackground
 import dev.chrisbanes.haze.HazeState
-import com.example.ui.components.GlassCard
+import com.example.ui.components.HazeGlassCard
 import com.example.ui.components.NeuIconButton
 import com.example.ui.components.PinLockDialog
 import com.example.ui.theme.CategoryApiColor
@@ -127,7 +138,8 @@ fun MainWorkspaceScreen(
 ) {
     val context = LocalContext.current
     val hazeState = remember { HazeState() }
-            val clipboard = LocalClipboardManager.current
+    val haptic = LocalHapticFeedback.current
+    val clipboard = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
 
     val blurApis by preferences.blurApis.collectAsState()
@@ -446,6 +458,18 @@ fun MainWorkspaceScreen(
                         val isSelected = selectedFolder == folder
                         val isFolderLocked = lockedFolders.contains(folder)
 
+                        // Liquid spring press-scale for folder chips
+                        val chipInteraction = remember(folder) { MutableInteractionSource() }
+                        val chipPressed by chipInteraction.collectIsPressedAsState()
+                        val chipScale by animateFloatAsState(
+                            targetValue = if (chipPressed) 0.94f else 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "folder_chip_press"
+                        )
+
                         val folderIconRes = when (folder) {
                             "All Notes" -> R.drawable.ic_custom_folder
                             "Favorites" -> R.drawable.ic_svg_favorite
@@ -468,6 +492,7 @@ fun MainWorkspaceScreen(
 
                         Box(
                             modifier = Modifier
+                                .graphicsLayer { scaleX = chipScale; scaleY = chipScale }
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
                                     if (isSelected) CrimsonPrimary
@@ -479,8 +504,14 @@ fun MainWorkspaceScreen(
                                     RoundedCornerShape(12.dp)
                                 )
                                 .combinedClickable(
-                                    onClick = { openFolder(folder) },
+                                    interactionSource = chipInteraction,
+                                    indication = null,
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        openFolder(folder)
+                                    },
                                     onLongClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         longPressedFolder = folder
                                     }
                                 )
@@ -522,7 +553,10 @@ fun MainWorkspaceScreen(
                                 if (isDarkMode) Color(0x26FFFFFF) else Color(0x1F718096),
                                 RoundedCornerShape(12.dp)
                             )
-                            .clickable { showAddFolderDialog = true }
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                showAddFolderDialog = true
+                            }
                             .padding(horizontal = 11.dp, vertical = 7.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -583,9 +617,25 @@ fun MainWorkspaceScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
-                        items(filteredNotes, key = { it.id }) { note ->
+                        itemsIndexed(filteredNotes, key = { _, note -> note.id }) { index, note ->
+                            // Staggered fade + slide-in. MutableTransitionState(false -> true)
+                            // makes the enter animation actually run on first composition.
+                            // Delay is capped so items far down the list don't wait seconds.
+                            val enterState = remember(note.id) {
+                                MutableTransitionState(false).apply { targetState = true }
+                            }
+                            val staggerDelay = index.coerceAtMost(8) * 60
+                            AnimatedVisibility(
+                                visibleState = enterState,
+                                enter = fadeIn(tween(350, delayMillis = staggerDelay)) +
+                                    slideInVertically(
+                                        tween(350, delayMillis = staggerDelay),
+                                        initialOffsetY = { it / 3 }
+                                    )
+                            ) {
                             CompactNoteCard(
                                 note = note,
+                                hazeState = hazeState,
                                 isDarkMode = isDarkMode,
                                 blurApis = blurApis,
                                 onOpen = {
@@ -600,6 +650,7 @@ fun MainWorkspaceScreen(
                                 },
                                 onCopy = {}
                             )
+                            }
                         }
                     }
                 }
@@ -865,8 +916,10 @@ fun MainWorkspaceScreen(
     // "Add Folder" dialog — Item 7
     if (showAddFolderDialog) {
         androidx.compose.ui.window.Dialog(onDismissRequest = { showAddFolderDialog = false; newFolderNameInput = "" }) {
-            GlassCard(
+            HazeGlassCard(
+                hazeState = hazeState,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(28.dp),
                 isDarkMode = isDarkMode,
                 strong = true
             ) {
@@ -1008,6 +1061,7 @@ fun MainWorkspaceScreen(
 @Composable
 fun CompactNoteCard(
     note: NoteEntity,
+    hazeState: HazeState,
     isDarkMode: Boolean,
     blurApis: Boolean,
     onOpen: () -> Unit,
@@ -1032,18 +1086,40 @@ fun CompactNoteCard(
         SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(Date(note.updatedAt))
     }
 
+    // Liquid spring press animation: 1.0 -> 0.94 -> ~1.02 -> 1.0
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember(note.id) { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "note_card_press"
+    )
+
     // Compact Card — Item 6: reduced from 10dp/44dp to 7dp/36dp so cards read
     // as smaller/denser while keeping the existing glass design language.
-    GlassCard(
+    HazeGlassCard(
+        hazeState = hazeState,
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .combinedClickable(
-                onClick = onOpen,
-                onLongClick = onLongPress
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onOpen()
+                },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongPress()
+                }
             ),
         shape = RoundedCornerShape(14.dp),
-        isDarkMode = isDarkMode,
-        elevation = 2.dp
+        isDarkMode = isDarkMode
     ) {
         Row(
             modifier = Modifier

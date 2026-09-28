@@ -31,7 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.theme.CrimsonPrimary
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun SplashScreen(
@@ -42,15 +44,22 @@ fun SplashScreen(
     val alpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        alpha.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-        )
-        scale.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-        )
-        delay(850)
+        // Alpha and scale run together (was sequential = ~1.3s before the hold).
+        coroutineScope {
+            launch {
+                alpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing)
+                )
+            }
+            launch {
+                scale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing)
+                )
+            }
+        }
+        delay(500)
         onSplashFinished()
     }
 

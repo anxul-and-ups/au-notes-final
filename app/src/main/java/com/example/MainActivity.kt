@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -63,6 +64,9 @@ sealed class Screen {
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must run before super.onCreate: shows the system splash instantly on
+        // launch so there is no 2-3s blank gap before the Compose splash appears.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         com.example.ui.util.SirenAudioPlayer.init(applicationContext)
