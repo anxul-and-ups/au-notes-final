@@ -302,7 +302,7 @@ object NoteExporter {
         var line = 0
         val total = layout.lineCount
         while (line < total) {
-            pager.ensure(layout.getLineBottom(line) - layout.getLineTop(line))
+            pager.ensure((layout.getLineBottom(line) - layout.getLineTop(line)).toFloat())
             val startTop = layout.getLineTop(line)
             var end = line
             while (end < total && (layout.getLineBottom(end) - startTop) <= (pager.bottom - pager.y)) end++

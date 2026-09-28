@@ -256,6 +256,8 @@ fun NoteEditorScreen(
     // Item 8: apply a text color either to the current selection, or as the
     // active "typing color" for newly typed characters. Passing null clears
     // the typing color (falls back to the day/night default — Item 9).
+    var activeColorHex by remember { mutableStateOf<String?>(null) }
+
     fun applyOrSetColor(hex: String?) {
         val sel = contentValue.selection
         if (!sel.collapsed && hex != null) {
@@ -273,7 +275,6 @@ fun NoteEditorScreen(
     var isUnderline by remember { mutableStateOf(initialNote?.isUnderline ?: false) }
     var isStrikethrough by remember { mutableStateOf(initialNote?.isStrikethrough ?: false) }
     var isCodeFormat by remember { mutableStateOf(initialNote?.isCodeFormat ?: false) }
-    var activeColorHex by remember { mutableStateOf<String?>(null) }
     var showFormatSheet by remember { mutableStateOf(false) }
     var isJsonMode by remember { mutableStateOf(false) }
 
