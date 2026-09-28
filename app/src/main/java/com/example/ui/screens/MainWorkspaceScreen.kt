@@ -92,6 +92,7 @@ import com.example.data.preferences.AppPreferences
 import com.example.data.repository.NoteRepository
 import com.example.ui.components.ExportDialog
 import com.example.ui.components.GlassBackground
+import dev.chrisbanes.haze.HazeState
 import com.example.ui.components.GlassCard
 import com.example.ui.components.NeuIconButton
 import com.example.ui.components.PinLockDialog
@@ -125,7 +126,8 @@ fun MainWorkspaceScreen(
     onCreateNote: () -> Unit
 ) {
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
+    val hazeState = remember { HazeState() }
+            val clipboard = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
 
     val blurApis by preferences.blurApis.collectAsState()
@@ -285,7 +287,7 @@ fun MainWorkspaceScreen(
         }
     }
 
-    GlassBackground(isDarkMode = isDarkMode) {
+    GlassBackground(isDarkMode = isDarkMode, hazeState = hazeState) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
