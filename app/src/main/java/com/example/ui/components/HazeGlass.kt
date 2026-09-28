@@ -103,7 +103,6 @@ fun HazeGlassCard(
             .clip(shape)
             .hazeChild(
                 state = hazeState,
-                shape = shape,
                 style = HazeStyle(
                     blurRadius = if (strong) 40.dp else 24.dp,
                     tint = HazeTint(tintColor),
@@ -154,7 +153,6 @@ fun HazeGlassChip(
             .clip(shape)
             .hazeChild(
                 state = hazeState,
-                shape = shape,
                 style = HazeStyle(
                     blurRadius = 16.dp,
                     tint = HazeTint(tintColor)
