@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.RepeatMode
@@ -648,13 +649,7 @@ fun MainWorkspaceScreen(
                                 HazeGlassCard(
                                     hazeState = hazeState,
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .sharedElement(
-                                            sharedContentState = rememberSharedContentState(
-                                                key = "folder-header-$targetFolder"
-                                            ),
-                                            animatedVisibilityScope = this
-                                        ),
+                                        .fillMaxWidth(),
                                     shape = RoundedCornerShape(16.dp),
                                     isDarkMode = isDarkMode
                                 ) {
