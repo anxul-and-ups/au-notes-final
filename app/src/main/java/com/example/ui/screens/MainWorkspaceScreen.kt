@@ -3,22 +3,12 @@ package com.example.ui.screens
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,7 +33,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,20 +72,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,8 +92,7 @@ import com.example.data.preferences.AppPreferences
 import com.example.data.repository.NoteRepository
 import com.example.ui.components.ExportDialog
 import com.example.ui.components.GlassBackground
-import dev.chrisbanes.haze.HazeState
-import com.example.ui.components.HazeGlassCard
+import com.example.ui.components.GlassCard
 import com.example.ui.components.NeuIconButton
 import com.example.ui.components.PinLockDialog
 import com.example.ui.theme.CategoryApiColor
@@ -127,7 +110,7 @@ import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun MainWorkspaceScreen(
     repository: NoteRepository,
@@ -142,8 +125,6 @@ fun MainWorkspaceScreen(
     onCreateNote: () -> Unit
 ) {
     val context = LocalContext.current
-    val hazeState = remember { HazeState() }
-    val haptic = LocalHapticFeedback.current
     val clipboard = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -304,7 +285,7 @@ fun MainWorkspaceScreen(
         }
     }
 
-    GlassBackground(isDarkMode = isDarkMode, hazeState = hazeState) {
+    GlassBackground(isDarkMode = isDarkMode) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -483,25 +464,8 @@ fun MainWorkspaceScreen(
                             else -> CrimsonPrimary
                         }
 
-                        val folderInteractionSource = remember(folder) {
-                            MutableInteractionSource()
-                        }
-                        val folderPressed by folderInteractionSource.collectIsPressedAsState()
-                        val folderScale by animateFloatAsState(
-                            targetValue = if (folderPressed) 0.94f else 1f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
-                            ),
-                            label = "folder_tap_scale_$folder"
-                        )
-
                         Box(
                             modifier = Modifier
-                                .graphicsLayer {
-                                    scaleX = folderScale
-                                    scaleY = folderScale
-                                }
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
                                     if (isSelected) CrimsonPrimary
@@ -513,14 +477,8 @@ fun MainWorkspaceScreen(
                                     RoundedCornerShape(12.dp)
                                 )
                                 .combinedClickable(
-                                    interactionSource = folderInteractionSource,
-                                    indication = null,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        openFolder(folder)
-                                    },
+                                    onClick = { openFolder(folder) },
                                     onLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         longPressedFolder = folder
                                     }
                                 )
@@ -616,122 +574,30 @@ fun MainWorkspaceScreen(
                         }
                     }
                 } else {
-                    SharedTransitionLayout {
-                        AnimatedContent(
-                            targetState = selectedFolder,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            transitionSpec = {
-                                (
-                                    slideInHorizontally(
-                                        animationSpec = tween(
-                                            durationMillis = 420
-                                        ),
-                                        initialOffsetX = { it / 5 }
-                                    ) + fadeIn(
-                                        animationSpec = tween(420)
-                                    )
-                                ).togetherWith(
-                                    slideOutHorizontally(
-                                        animationSpec = tween(280),
-                                        targetOffsetX = { -it / 8 }
-                                    ) + fadeOut(
-                                        animationSpec = tween(280)
-                                    )
-                                )
-                            },
-                            label = "folder_shared_transition"
-                        ) { targetFolder ->
-                            Column(
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                HazeGlassCard(
-                                    hazeState = hazeState,
-                                    modifier = Modifier
-                                        .fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    isDarkMode = isDarkMode
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(
-                                            horizontal = 14.dp,
-                                            vertical = 8.dp
-                                        ),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Folder,
-                                            contentDescription = null,
-                                            tint = CrimsonPrimary,
-                                            modifier = Modifier.size(17.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(7.dp))
-                                        Text(
-                                            text = targetFolder,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isDarkMode) Color.White else Color(0xFF222222)
-                                        )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        items(filteredNotes, key = { it.id }) { note ->
+                            CompactNoteCard(
+                                note = note,
+                                isDarkMode = isDarkMode,
+                                blurApis = blurApis,
+                                onOpen = {
+                                    if (note.isLocked) {
+                                        pendingLockedNote = note
+                                    } else {
+                                        onOpenNote(note)
                                     }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    contentPadding = PaddingValues(bottom = 80.dp)
-                                ) {
-                                    itemsIndexed(
-                                        filteredNotes,
-                                        key = { _, note -> note.id }
-                                    ) { index, note ->
-                                        AnimatedVisibility(
-                                            visible = true,
-                                            enter = fadeIn(
-                                                animationSpec = tween(
-                                                    durationMillis = 350,
-                                                    delayMillis = index * 60
-                                                )
-                                            ) + androidx.compose.animation.slideInVertically(
-                                                animationSpec = tween(
-                                                    durationMillis = 350,
-                                                    delayMillis = index * 60
-                                                ),
-                                                initialOffsetY = { it / 3 }
-                                            ),
-                                            exit = fadeOut(
-                                                animationSpec = tween(180)
-                                            )
-                                        ) {
-                                            CompactNoteCard(
-                                                note = note,
-                                                hazeState = hazeState,
-                                                isDarkMode = isDarkMode,
-                                                blurApis = blurApis,
-                                                onOpen = {
-                                                    haptic.performHapticFeedback(
-                                                        HapticFeedbackType.LongPress
-                                                    )
-                                                    if (note.isLocked) {
-                                                        pendingLockedNote = note
-                                                    } else {
-                                                        onOpenNote(note)
-                                                    }
-                                                },
-                                                onLongPress = {
-                                                    haptic.performHapticFeedback(
-                                                        HapticFeedbackType.LongPress
-                                                    )
-                                                    longPressedNote = note
-                                                },
-                                                onCopy = {}
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                                },
+                                onLongPress = {
+                                    longPressedNote = note
+                                },
+                                onCopy = {}
+                            )
                         }
                     }
                 }
@@ -997,8 +863,7 @@ fun MainWorkspaceScreen(
     // "Add Folder" dialog — Item 7
     if (showAddFolderDialog) {
         androidx.compose.ui.window.Dialog(onDismissRequest = { showAddFolderDialog = false; newFolderNameInput = "" }) {
-            HazeGlassCard(
-                hazeState = hazeState,
+            GlassCard(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 isDarkMode = isDarkMode,
                 strong = true
@@ -1141,7 +1006,6 @@ fun MainWorkspaceScreen(
 @Composable
 fun CompactNoteCard(
     note: NoteEntity,
-    hazeState: HazeState,
     isDarkMode: Boolean,
     blurApis: Boolean,
     onOpen: () -> Unit,
@@ -1168,46 +1032,16 @@ fun CompactNoteCard(
 
     // Compact Card — Item 6: reduced from 10dp/44dp to 7dp/36dp so cards read
     // as smaller/denser while keeping the existing glass design language.
-    val interactionSource = remember(note.id) {
-        MutableInteractionSource()
-    }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.94f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "note_card_press_scale"
-    )
-    val haptic = LocalHapticFeedback.current
-
-    HazeGlassCard(
-        hazeState = hazeState,
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
             .combinedClickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = {
-                    haptic.performHapticFeedback(
-                        HapticFeedbackType.LongPress
-                    )
-                    onOpen()
-                },
-                onLongClick = {
-                    haptic.performHapticFeedback(
-                        HapticFeedbackType.LongPress
-                    )
-                    onLongPress()
-                }
+                onClick = onOpen,
+                onLongClick = onLongPress
             ),
         shape = RoundedCornerShape(14.dp),
-        isDarkMode = isDarkMode
+        isDarkMode = isDarkMode,
+        elevation = 2.dp
     ) {
         Row(
             modifier = Modifier
