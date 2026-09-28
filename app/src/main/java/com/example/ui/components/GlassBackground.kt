@@ -11,30 +11,38 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.example.ui.theme.NeuDarkBg
 import com.example.ui.theme.NeuLightBg
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 
 /**
  * Neumorphic Canvas Background.
- * Provides the soft matte tactile backdrop with subtle top-left directional illumination
- * that physically grounds all extruded and debossed elements.
+ * If hazeState is provided, marks this as the SOURCE for Haze blur —
+ * meaning any HazeGlassCard placed on top will blur this background.
  */
 @Composable
 fun GlassBackground(
     isDarkMode: Boolean = true,
+    hazeState: HazeState? = null,
     content: @Composable () -> Unit
 ) {
     val baseBg = if (isDarkMode) NeuDarkBg else NeuLightBg
+
+    val bgModifier = if (hazeState != null) {
+        Modifier.fillMaxSize().hazeSource(state = hazeState)
+    } else {
+        Modifier.fillMaxSize()
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(baseBg)
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = bgModifier) {
             val width = size.width
             val height = size.height
 
             if (isDarkMode) {
-                // Top-left diffuse ambient key light (giving physics to the highlights)
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
@@ -46,8 +54,6 @@ fun GlassBackground(
                         radius = width * 1.1f
                     )
                 )
-
-                // Subtle warm crimson ambient bloom in the bottom corner for brand depth
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
@@ -59,8 +65,6 @@ fun GlassBackground(
                         radius = width * 0.9f
                     )
                 )
-
-                // Soft bottom edge shadow gradient for depth
                 drawRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(
@@ -72,7 +76,6 @@ fun GlassBackground(
                     )
                 )
             } else {
-                // Light Mode: Clean porcelain clay canvas with soft top-left key light
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
@@ -84,8 +87,6 @@ fun GlassBackground(
                         radius = width * 1.2f
                     )
                 )
-
-                // Soft subtle ambient rose-crimson accent tint at bottom right
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
